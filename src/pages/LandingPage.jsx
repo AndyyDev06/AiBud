@@ -16,82 +16,99 @@ const FeatureCard = React.memo(({ icon, title, children }) => (
   </motion.div>
 ));
 
-const PricingCard = React.memo(({ plan, price, features, primary = false }) => {
-  const cardRef = useRef(null);
-  const [mousePosition, setMousePosition] = useState({ x: -100, y: -100 });
+const PricingCard = React.memo(
+  ({ plan, price, features, primary = false, onChoosePlan }) => {
+    const cardRef = useRef(null);
+    const [mousePosition, setMousePosition] = useState({ x: -100, y: -100 });
 
-  const handleMouseMove = (e) => {
-    if (cardRef.current) {
-      const rect = cardRef.current.getBoundingClientRect();
-      setMousePosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-    }
-  };
+    const handleMouseMove = (e) => {
+      if (cardRef.current) {
+        const rect = cardRef.current.getBoundingClientRect();
+        setMousePosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+      }
+    };
 
-  return (
-    <motion.div
-      ref={cardRef}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={() => setMousePosition({ x: -100, y: -100 })}
-      whileHover={{ y: -5 }}
-      transition={{ duration: 0.2 }}
-      className={`relative p-8 rounded-2xl border-2 h-full flex flex-col overflow-hidden ${
-        primary
-          ? "bg-light-surface dark:bg-dark-surface shadow-2xl border-light-primary"
-          : "bg-light-surface dark:bg-dark-surface shadow-lg border-gray-200 dark:border-dark-surface"
-      }`}
-      style={{
-        background: primary
-          ? `radial-gradient(400px at ${mousePosition.x}px ${mousePosition.y}px, rgba(51, 132, 255, 0.15), transparent 80%)`
-          : `radial-gradient(400px at ${mousePosition.x}px ${mousePosition.y}px, rgba(129, 132, 152, 0.1), transparent 80%)`,
-        backgroundColor: primary ? "#171E39" : "#171E39", // Fallback for dark
-      }}
-    >
-      <div
-        className="absolute inset-0"
+    return (
+      <motion.div
+        ref={cardRef}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setMousePosition({ x: -100, y: -100 })}
+        whileHover={{ y: -5 }}
+        transition={{ duration: 0.2 }}
+        className={`relative p-8 rounded-2xl border-2 h-full flex flex-col overflow-hidden ${
+          primary
+            ? "bg-light-surface dark:bg-dark-surface shadow-2xl border-light-primary"
+            : "bg-light-surface dark:bg-dark-surface shadow-lg border-gray-200 dark:border-dark-surface"
+        }`}
         style={{
-          background: `radial-gradient(400px at ${mousePosition.x}px ${mousePosition.y}px, rgba(51, 132, 255, 0.1), transparent 80%)`,
-          backgroundColor: "#FFFFFF", // Fallback for light
+          background: primary
+            ? `radial-gradient(400px at ${mousePosition.x}px ${mousePosition.y}px, rgba(51, 132, 255, 0.15), transparent 80%)`
+            : `radial-gradient(400px at ${mousePosition.x}px ${mousePosition.y}px, rgba(129, 132, 152, 0.1), transparent 80%)`,
+          backgroundColor: primary ? "#171E39" : "#171E39", // Fallback for dark
         }}
-      ></div>
+      >
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `radial-gradient(400px at ${mousePosition.x}px ${mousePosition.y}px, rgba(51, 132, 255, 0.1), transparent 80%)`,
+            backgroundColor: "#FFFFFF", // Fallback for light
+          }}
+        ></div>
 
-      <div className="relative z-10 flex flex-col h-full">
-        {primary && (
-          <div className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 px-4 py-1 bg-light-primary text-white text-sm font-semibold rounded-full">
-            Most Popular
-          </div>
-        )}
-        <h3
-          className={`text-xl font-bold mb-2 ${
-            primary
-              ? "text-light-primary dark:text-dark-primary"
-              : "text-light-text dark:text-dark-text"
-          }`}
-        >
-          {plan}
-        </h3>
-        <p className="text-5xl font-extrabold text-light-text dark:text-dark-text mb-4">
-          {price}
-        </p>
-        <p className="text-light-secondary dark:text-dark-secondary mb-8 flex-grow">
-          {features}
-        </p>
-        <Link
-          to="/chat"
-          className={`inline-block w-full text-center font-bold text-lg px-8 py-3 rounded-xl shadow-md transition-all duration-200 transform hover:scale-105 ${
-            primary
-              ? "bg-light-primary text-white hover:bg-blue-700"
-              : "bg-gray-200 dark:bg-dark-surface text-light-primary dark:text-white hover:bg-gray-300 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-700"
-          }`}
-        >
-          Choose {plan}
-        </Link>
-      </div>
-    </motion.div>
-  );
-});
+        <div className="relative z-10 flex flex-col h-full">
+          {primary && (
+            <div className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 px-4 py-1 bg-light-primary text-white text-sm font-semibold rounded-full">
+              Most Popular
+            </div>
+          )}
+          <h3
+            className={`text-xl font-bold mb-2 ${
+              primary
+                ? "text-light-primary dark:text-dark-primary"
+                : "text-light-text dark:text-dark-text"
+            }`}
+          >
+            {plan}
+          </h3>
+          <p className="text-5xl font-extrabold text-light-text dark:text-dark-text mb-4">
+            {price}
+          </p>
+          <p className="text-light-secondary dark:text-dark-secondary mb-8 flex-grow">
+            {features}
+          </p>
+          <button
+            onClick={onChoosePlan}
+            className={`inline-block w-full text-center font-bold text-lg px-8 py-3 rounded-xl shadow-md transition-all duration-200 transform hover:scale-105 ${
+              primary
+                ? "bg-light-primary text-white hover:bg-blue-700"
+                : "bg-gray-200 dark:bg-dark-surface text-light-primary dark:text-white hover:bg-gray-300 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-700"
+            }`}
+          >
+            Choose {plan}
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
+);
 
 const LandingPage = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
+
+  const handleUpgrade = async () => {
+    try {
+      const response = await fetch(
+        "http://localhost:4242/create-checkout-session",
+        {
+          method: "POST",
+        }
+      );
+      const session = await response.json();
+      window.location.href = session.url;
+    } catch (error) {
+      console.error("Error creating checkout session:", error);
+    }
+  };
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
@@ -197,22 +214,19 @@ const LandingPage = () => {
           <h2 className="text-4xl font-extrabold text-center mb-16 text-light-text dark:text-dark-text">
             Simple Pricing for Everyone
           </h2>
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto items-start">
+          <div className="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto items-start">
             <PricingCard
-              plan="Basic"
-              price="$4.99/mo"
-              features="Perfect to start your AI journey."
+              plan="Free"
+              price="$0"
+              features="100 messages per month. The perfect way to get started."
+              onChoosePlan={() => (window.location.href = "/chat")}
             />
             <PricingCard
               plan="Pro"
               price="$9.99/mo"
-              features="Unlimited chats, custom personalities, advanced tools."
+              features="Unlimited messages, access to all models, and priority support."
               primary={true}
-            />
-            <PricingCard
-              plan="Team"
-              price="$44.99/mo"
-              features="For growing teams with shared workspaces & admin tools."
+              onChoosePlan={handleUpgrade}
             />
           </div>
         </section>

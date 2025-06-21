@@ -1,6 +1,10 @@
-# WebDev Assistant
+# AIBud
 
-A modern React application that provides AI-powered assistance for web development. Built with React, Vite, Tailwind CSS, and integrated with Ollama for local AI inference.
+A modern React application that provides a friendly AI assistant. Built with React, Vite, Tailwind CSS, and integrated with Ollama for local AI inference.
+
+## About the Creator
+
+AIBud was created by **Andrew Brown**, a solo founder from America. It's a passion project with the goal of helping the world have more access to AI.
 
 ## 🚀 Features
 

@@ -199,7 +199,14 @@ const ChatWelcomeMessage = React.memo(() => (
 ));
 
 const Chat = React.memo(
-  ({ chat, onSendMessage, isLoading, onStopGeneration, isDarkMode }) => {
+  ({
+    chat,
+    onSendMessage,
+    isLoading,
+    isSearching,
+    onStopGeneration,
+    isDarkMode,
+  }) => {
     const [input, setInput] = useState("");
     const messagesEndRef = useRef(null);
     const textareaRef = useRef(null);
@@ -249,28 +256,34 @@ const Chat = React.memo(
           <form onSubmit={handleSend} className="relative">
             <textarea
               ref={textareaRef}
+              id="chat-input"
+              name="chat-input"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
+                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                   handleSend(e);
                 }
               }}
               placeholder="Type your message..."
-              className="w-full p-4 pr-20 rounded-2xl bg-light-surface dark:bg-dark-surface resize-none focus:outline-none focus:ring-2 focus:ring-light-primary/50 dark:focus:ring-dark-primary/50 transition-shadow"
+              className="w-full p-4 pr-24 rounded-lg bg-light-surface dark:bg-dark-surface resize-none focus:outline-none focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary transition-all duration-300"
               rows={1}
-              style={{ maxHeight: "150px" }}
+              disabled={isLoading}
             />
             <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center">
               {isLoading ? (
-                <button
-                  type="button"
-                  onClick={onStopGeneration}
-                  className="p-2 rounded-full bg-red-500 text-white hover:bg-red-600"
-                >
-                  <Square size={20} />
-                </button>
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs text-light-secondary dark:text-dark-secondary animate-pulse">
+                    {isSearching ? "Searching..." : "Generating..."}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={onStopGeneration}
+                    className="p-2 rounded-full bg-red-500 text-white hover:bg-red-600"
+                  >
+                    <Square size={20} />
+                  </button>
+                </div>
               ) : (
                 <button
                   type="submit"

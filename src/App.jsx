@@ -32,6 +32,7 @@ function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [isPro, setIsPro] = useState(false);
   const abortControllerRef = useRef(null);
   const chatsRef = useRef(chats);
 
@@ -49,6 +50,7 @@ function App() {
     const savedTheme = localStorage.getItem("theme");
     const savedSidebarState = localStorage.getItem("sidebarCollapsed");
     const savedChatUsage = localStorage.getItem("chatUsage");
+    const savedIsPro = localStorage.getItem("isPro");
 
     if (savedChats) {
       const parsedChats = JSON.parse(savedChats);
@@ -70,6 +72,7 @@ function App() {
     if (savedPersonality) setPersonality(savedPersonality);
     if (savedTheme) setIsDarkMode(savedTheme === "dark");
     if (savedSidebarState) setIsSidebarCollapsed(savedSidebarState === "true");
+    if (savedIsPro) setIsPro(JSON.parse(savedIsPro));
 
     if (savedChatUsage) {
       const usage = JSON.parse(savedChatUsage);
@@ -79,6 +82,24 @@ function App() {
       } else {
         setChatUsage({ count: 0, month: currentMonth });
       }
+    }
+  }, []);
+
+  // Check for Stripe success/cancel query params
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+
+    if (query.get("success")) {
+      setIsPro(true);
+      alert("Upgrade successful! You are now a Pro user.");
+      window.history.replaceState({}, document.title, "/");
+    }
+
+    if (query.get("canceled")) {
+      alert(
+        "Upgrade canceled. You can upgrade to Pro anytime from the settings."
+      );
+      window.history.replaceState({}, document.title, "/");
     }
   }, []);
 
@@ -96,6 +117,7 @@ function App() {
     localStorage.setItem("chatUsage", JSON.stringify(chatUsage));
     localStorage.setItem("theme", isDarkMode ? "dark" : "light");
     localStorage.setItem("sidebarCollapsed", isSidebarCollapsed.toString());
+    localStorage.setItem("isPro", JSON.stringify(isPro));
   }, [
     chats,
     activeChatId,
@@ -105,6 +127,7 @@ function App() {
     chatUsage,
     isDarkMode,
     isSidebarCollapsed,
+    isPro,
   ]);
 
   // Apply theme to document
@@ -153,8 +176,18 @@ function App() {
       if (!message.trim()) return;
 
       const currentMonth = new Date().getMonth();
-      if (chatUsage.month === currentMonth && chatUsage.count >= 100) {
-        alert("You have reached your monthly limit of 100 free messages.");
+      if (
+        !isPro &&
+        chatUsage.month === currentMonth &&
+        chatUsage.count >= 100
+      ) {
+        if (
+          window.confirm(
+            "You've reached your message limit. Upgrade to Pro for unlimited messages?"
+          )
+        ) {
+          handleUpgrade();
+        }
         return;
       }
 
@@ -184,7 +217,7 @@ function App() {
               )
               .join("\n\n---\n\n");
           }
-        } catch (error) => {
+        } catch (error) {
           console.error("Error fetching search results:", error);
         } finally {
           setIsSearching(false);
@@ -221,13 +254,15 @@ function App() {
         };
       });
 
-      setChatUsage((prevUsage) => {
-        const currentMonth = new Date().getMonth();
-        if (prevUsage.month !== currentMonth) {
-          return { count: 1, month: currentMonth };
-        }
-        return { ...prevUsage, count: prevUsage.count + 1 };
-      });
+      if (!isPro) {
+        setChatUsage((prevUsage) => {
+          const currentMonth = new Date().getMonth();
+          if (prevUsage.month !== currentMonth) {
+            return { count: 1, month: currentMonth };
+          }
+          return { ...prevUsage, count: prevUsage.count + 1 };
+        });
+      }
 
       const conversationHistory = [...history, userMessage]
         .map((msg) => {
@@ -241,35 +276,17 @@ function App() {
         .filter(Boolean)
         .join("\n\n");
 
-      const promptWithSearch = `You are an AI assistant with access to real-time web search results.
-Personality: ${personalities[personality]}
-
-Web Search Results:
-${searchResultsText || "No search results found."}
-
-Based on the provided search results and the conversation history, please provide a comprehensive and helpful answer to the user's question.
+      const finalPrompt = `${personalities[personality]}
+${
+  searchResultsText
+    ? `\nWeb Search Results (for context):\n${searchResultsText}`
+    : ""
+}
 
 Conversation History:
-${conversationHistory || "This is the beginning of the conversation."}
+${conversationHistory}
 
-User's Question: ${message}
-
-Assistant's Answer:`;
-
-      const promptWithoutSearch = `You are an AI assistant.
-Personality: ${personalities[personality]}
-You do not have access to real-time web search for this query.
-
-Here is the conversation history:
-${conversationHistory || "This is the beginning of the conversation."}
-
-Based on your general knowledge and the conversation history, provide a comprehensive and helpful answer to the user's question.
-
-User's Question: ${message}
-
-Assistant's Answer:`;
-
-      const finalPrompt = searchResultsText ? promptWithSearch : promptWithoutSearch;
+Assistant:`;
 
       abortControllerRef.current = new AbortController();
 
@@ -316,7 +333,13 @@ Assistant's Answer:`;
                   ...chat,
                   messages: chat.messages.map((msg) =>
                     msg.id === assistantMessage.id
-                      ? { ...msg, content: msg.content + parsed.response }
+                      ? {
+                          ...msg,
+                          content: (msg.content + parsed.response).replace(
+                            /<company_name>/g,
+                            "AIBud"
+                          ),
+                        }
                       : msg
                   ),
                 }));
@@ -347,7 +370,47 @@ Assistant's Answer:`;
         abortControllerRef.current = null;
       }
     },
-    [activeChatId, ollamaUrl, selectedModel, personality, updateChat, chatUsage]
+    [
+      activeChatId,
+      ollamaUrl,
+      selectedModel,
+      personality,
+      updateChat,
+      chatUsage,
+      isPro,
+    ]
+  );
+
+  const handleUpgrade = useCallback(async () => {
+    try {
+      const response = await fetch(
+        "http://localhost:4242/create-checkout-session",
+        {
+          method: "POST",
+        }
+      );
+      const session = await response.json();
+      window.location.href = session.url;
+    } catch (error) {
+      console.error("Error creating checkout session:", error);
+    }
+  }, []);
+
+  const handleModelChange = useCallback(
+    (newModel) => {
+      if (!isPro && newModel !== selectedModel) {
+        if (
+          window.confirm(
+            "Changing AI models is a Pro feature. Upgrade now for access to all models?"
+          )
+        ) {
+          handleUpgrade();
+        }
+      } else {
+        setSelectedModel(newModel);
+      }
+    },
+    [isPro, selectedModel, handleUpgrade]
   );
 
   const stopGeneration = useCallback(() => {
@@ -420,6 +483,7 @@ Assistant's Answer:`;
         onToggleTheme={toggleTheme}
         onShowSettings={() => setShowSettings(true)}
         chatUsage={chatUsage}
+        isPro={isPro}
       />
       <div className="flex-1 flex flex-col">
         {activeChat ? (
@@ -490,7 +554,7 @@ Assistant's Answer:`;
                     <select
                       id="model"
                       value={selectedModel}
-                      onChange={(e) => setSelectedModel(e.target.value)}
+                      onChange={(e) => handleModelChange(e.target.value)}
                       className="flex-grow w-full p-2 mt-1 rounded bg-light-background dark:bg-dark-background border border-gray-300 dark:border-gray-700"
                     >
                       {availableModels.map((model) => (
@@ -556,6 +620,31 @@ Assistant's Answer:`;
                     />
                   </div>
                 </div>
+                {!isPro ? (
+                  <div className="p-4 bg-light-background dark:bg-dark-background rounded-lg">
+                    <h3 className="font-bold text-lg text-light-primary dark:text-dark-primary">
+                      Upgrade to Pro
+                    </h3>
+                    <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
+                      Unlock unlimited messages and support the creator.
+                    </p>
+                    <button
+                      onClick={handleUpgrade}
+                      className="w-full mt-4 px-4 py-2 rounded-md bg-light-primary text-white font-semibold hover:bg-light-primary/90"
+                    >
+                      Upgrade Now
+                    </button>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-green-100 dark:bg-green-900/50 rounded-lg text-center">
+                    <h3 className="font-bold text-lg text-green-700 dark:text-green-300">
+                      You are a Pro User!
+                    </h3>
+                    <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                      Thank you for your support!
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="mt-6 flex justify-end">

@@ -10,8 +10,60 @@ import {
   Settings,
   Sun,
   Moon,
+  MoreHorizontal,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+
+const ChatMenu = ({ chat, onRename, onDelete, onClose, triggerRef }) => {
+  const menuRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target) &&
+        !triggerRef.current.contains(event.target)
+      ) {
+        onClose();
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [onClose, triggerRef]);
+
+  return (
+    <motion.div
+      ref={menuRef}
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className="absolute right-0 top-full mt-1 w-32 bg-light-surface dark:bg-dark-surface rounded-md shadow-lg z-10 border border-light-background dark:border-dark-background"
+    >
+      <button
+        onClick={() => {
+          onRename(chat.id, chat.title);
+          onClose();
+        }}
+        className="flex items-center w-full px-3 py-2 text-sm text-left hover:bg-light-background dark:hover:bg-dark-background"
+      >
+        <Edit3 size={14} className="mr-2" />
+        Rename
+      </button>
+      <button
+        onClick={() => {
+          onDelete(chat.id);
+          onClose();
+        }}
+        className="flex items-center w-full px-3 py-2 text-sm text-left text-red-500 hover:bg-light-background dark:hover:bg-dark-background"
+      >
+        <Trash2 size={14} className="mr-2" />
+        Delete
+      </button>
+    </motion.div>
+  );
+};
 
 const Sidebar = React.memo(
   ({
@@ -27,13 +79,17 @@ const Sidebar = React.memo(
     onToggleTheme,
     onShowSettings,
     chatUsage,
+    isPro,
   }) => {
     const [editingChatId, setEditingChatId] = useState(null);
     const [editingTitle, setEditingTitle] = useState("");
+    const [openMenuChatId, setOpenMenuChatId] = useState(null);
+    const menuTriggerRefs = React.useRef({});
 
     const handleRenameStart = (chatId, currentTitle) => {
       setEditingChatId(chatId);
       setEditingTitle(currentTitle);
+      setOpenMenuChatId(null);
     };
 
     const handleRenameConfirm = () => {
@@ -47,6 +103,14 @@ const Sidebar = React.memo(
     const handleRenameCancel = () => {
       setEditingChatId(null);
       setEditingTitle("");
+    };
+
+    const toggleMenu = (chatId) => {
+      setOpenMenuChatId((prev) => (prev === chatId ? null : chatId));
+    };
+
+    const closeMenu = () => {
+      setOpenMenuChatId(null);
     };
 
     return (
@@ -95,94 +159,102 @@ const Sidebar = React.memo(
 
         <div className="flex-1 overflow-y-auto pr-1">
           <AnimatePresence>
-            {chats.map((chat) => (
-              <motion.div
-                key={chat.id}
-                layout
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.2 }}
-                className={`flex items-center p-3 my-1 rounded-lg cursor-pointer transition-colors duration-200 ${
-                  activeChatId === chat.id
-                    ? "bg-light-primary/20 dark:bg-dark-primary/20"
-                    : "hover:bg-light-background dark:hover:bg-dark-background"
-                }`}
-                onClick={() => !editingChatId && onSwitchChat(chat.id)}
-              >
-                {!isCollapsed && (
-                  <div className="flex-1 overflow-hidden">
-                    {editingChatId === chat.id ? (
-                      <div className="flex items-center">
-                        <input
-                          type="text"
-                          value={editingTitle}
-                          onChange={(e) => setEditingTitle(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleRenameConfirm();
-                            if (e.key === "Escape") handleRenameCancel();
-                          }}
-                          autoFocus
-                          className="w-full bg-transparent text-sm focus:outline-none"
+            {chats.map((chat) => {
+              // Ensure a ref is created for each menu trigger
+              if (!menuTriggerRefs.current[chat.id]) {
+                menuTriggerRefs.current[chat.id] = React.createRef();
+              }
+
+              return (
+                <motion.div
+                  key={chat.id}
+                  layout
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.2 }}
+                  className={`group flex items-center p-3 my-1 rounded-lg cursor-pointer transition-colors duration-200 relative ${
+                    activeChatId === chat.id
+                      ? "bg-light-primary/20 dark:bg-dark-primary/20"
+                      : "hover:bg-light-background dark:hover:bg-dark-background"
+                  }`}
+                  onClick={() => !editingChatId && onSwitchChat(chat.id)}
+                >
+                  {!isCollapsed && (
+                    <div className="flex-1 overflow-hidden">
+                      {editingChatId === chat.id ? (
+                        <div className="flex items-center">
+                          <input
+                            type="text"
+                            value={editingTitle}
+                            onChange={(e) => setEditingTitle(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleRenameConfirm();
+                              if (e.key === "Escape") handleRenameCancel();
+                            }}
+                            autoFocus
+                            onBlur={handleRenameConfirm}
+                            className="w-full bg-transparent text-sm focus:outline-none"
+                          />
+                        </div>
+                      ) : (
+                        <span className="text-sm font-medium truncate">
+                          {chat.title}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {!isCollapsed && !editingChatId && (
+                    <div className="flex items-center ml-2">
+                      <button
+                        ref={menuTriggerRefs.current[chat.id]}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleMenu(chat.id);
+                        }}
+                        className="p-1 rounded-md opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-light-background dark:hover:bg-dark-background"
+                      >
+                        <MoreHorizontal size={16} />
+                      </button>
+                      {openMenuChatId === chat.id && (
+                        <ChatMenu
+                          chat={chat}
+                          onRename={() =>
+                            handleRenameStart(chat.id, chat.title)
+                          }
+                          onDelete={() => onDeleteChat(chat.id)}
+                          onClose={closeMenu}
+                          triggerRef={menuTriggerRefs.current[chat.id]}
                         />
-                      </div>
-                    ) : (
-                      <span className="text-sm font-medium truncate">
-                        {chat.title}
-                      </span>
-                    )}
-                  </div>
-                )}
-                {!isCollapsed && (
-                  <div className="flex items-center ml-2">
-                    {editingChatId === chat.id ? (
-                      <>
-                        <button
-                          onClick={handleRenameConfirm}
-                          className="p-1 hover:text-green-500"
-                        >
-                          <Check size={16} />
-                        </button>
-                        <button
-                          onClick={handleRenameCancel}
-                          className="p-1 hover:text-red-500"
-                        >
-                          <X size={16} />
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRenameStart(chat.id, chat.title);
-                          }}
-                          className="p-1 opacity-0 group-hover:opacity-100 hover:text-light-primary"
-                        >
-                          <Edit3 size={16} />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDeleteChat(chat.id);
-                          }}
-                          className="p-1 opacity-0 group-hover:opacity-100 hover:text-red-500"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                )}
-              </motion.div>
-            ))}
+                      )}
+                    </div>
+                  )}
+                  {!isCollapsed && editingChatId === chat.id && (
+                    <div className="flex items-center ml-2">
+                      <button
+                        onClick={handleRenameConfirm}
+                        className="p-1 hover:text-green-500"
+                      >
+                        <Check size={16} />
+                      </button>
+                      <button
+                        onClick={handleRenameCancel}
+                        className="p-1 hover:text-red-500"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })}
           </AnimatePresence>
         </div>
 
         <div
           className={`pt-3 border-t border-light-background dark:border-dark-background`}
         >
-          {!isCollapsed && (
+          {!isCollapsed && !isPro && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
