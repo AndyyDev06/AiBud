@@ -7,7 +7,7 @@ import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <Router>
+    <Router basename="/AiBud/">
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/chat" element={<App />} />
