@@ -1,0 +1,254 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: "Inter", system-ui, sans-serif;
+  }
+
+  body {
+    @apply antialiased;
+    /* Prevent page scrolling when chat is active */
+    overflow-x: hidden;
+  }
+
+  /* Prevent page scroll when chat input is focused */
+  body.chat-focused {
+    overflow: hidden;
+  }
+
+  /* Dark mode scrollbar */
+  .dark ::-webkit-scrollbar-track {
+    @apply bg-gray-800;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    @apply bg-gray-600 hover:bg-gray-500;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-2xl shadow-sm border border-gray-200 p-6 dark:bg-gray-800 dark:border-gray-700;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-gray-50 focus:bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:bg-gray-600;
+  }
+
+  .btn-primary {
+    @apply px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium shadow-sm hover:shadow-md;
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-100 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full hover:bg-gray-400 transition-colors;
+  }
+
+  /* Line clamp utility */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Smooth transitions */
+  * {
+    transition-property: color, background-color, border-color,
+      text-decoration-color, fill, stroke, opacity, box-shadow, transform,
+      filter, backdrop-filter;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+
+  /* Focus styles */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary-600 to-primary-700 bg-clip-text text-transparent;
+  }
+
+  /* Glass effect */
+  .glass {
+    @apply bg-white/80 backdrop-blur-sm border border-white/20 dark:bg-gray-800/80 dark:border-gray-700/20;
+  }
+
+  /* Pulse animation for loading states */
+  @keyframes pulse-slow {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  .animate-pulse-slow {
+    animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* Bounce animation for interactive elements */
+  @keyframes bounce-gentle {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-2px);
+    }
+  }
+
+  .animate-bounce-gentle {
+    animation: bounce-gentle 2s infinite;
+  }
+
+  /* Code block styling */
+  pre {
+    @apply font-mono text-sm leading-relaxed;
+  }
+
+  code {
+    @apply font-mono;
+  }
+
+  /* Message bubble animations */
+  .message-enter {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  .message-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 200ms ease-out, transform 200ms ease-out;
+  }
+
+  /* Hover effects for interactive elements */
+  .hover-lift {
+    @apply transition-transform duration-200 hover:-translate-y-1 hover:shadow-lg;
+  }
+
+  /* Status indicators */
+  .status-online {
+    @apply w-2 h-2 bg-green-500 rounded-full;
+  }
+
+  .status-offline {
+    @apply w-2 h-2 bg-gray-400 rounded-full;
+  }
+
+  /* Typography improvements */
+  .prose {
+    @apply text-gray-800 leading-relaxed dark:text-gray-200;
+  }
+
+  .prose h1,
+  .prose h2,
+  .prose h3,
+  .prose h4 {
+    @apply font-bold text-gray-900 mb-2 dark:text-white;
+  }
+
+  .prose p {
+    @apply mb-3;
+  }
+
+  .prose ul,
+  .prose ol {
+    @apply mb-3 pl-6;
+  }
+
+  .prose li {
+    @apply mb-1;
+  }
+
+  .prose code {
+    @apply bg-gray-100 text-gray-800 px-2 py-1 rounded text-sm font-mono border dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600;
+  }
+
+  .prose pre {
+    @apply bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto my-3;
+  }
+
+  .prose blockquote {
+    @apply border-l-4 border-primary-500 pl-4 italic text-gray-700 my-3 dark:text-gray-300;
+  }
+
+  /* Animation for the copy button */
+  @keyframes copied-animation {
+    0% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.1);
+      opacity: 0.7;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  .copied-animation {
+    animation: copied-animation 0.3s ease-in-out;
+  }
+
+  /* Dark mode specific styles */
+  .dark .prose strong {
+    @apply text-white;
+  }
+
+  .dark .prose em {
+    @apply text-gray-300;
+  }
+
+  /* Theme transition */
+  .theme-transition {
+    @apply transition-colors duration-200;
+  }
+
+  /* Dark mode input focus */
+  .dark .input-field:focus {
+    @apply ring-primary-500 border-primary-500;
+  }
+
+  /* Dark mode button hover states */
+  .dark .btn-secondary:hover {
+    @apply bg-gray-600;
+  }
+
+  /* Dark mode card hover effects */
+  .dark .card:hover {
+    @apply border-gray-600;
+  }
+
+  /* Chat container specific styles */
+  .chat-container {
+    @apply overflow-y-auto;
+    scroll-behavior: smooth;
+  }
+
+  /* Prevent page scroll when chat is active */
+  .chat-active {
+    overflow: hidden;
+  }
+}
