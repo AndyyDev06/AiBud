@@ -2,6 +2,7 @@
   "name": "webdev-assistant",
   "private": true,
   "version": "0.0.0",
+  "homepage": "https://andyydev06.github.io/AiBud",
   "type": "module",
   "scripts": {
     "dev": "concurrently \"npm run server\" \"npm run client\"",
