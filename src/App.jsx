@@ -6,8 +6,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import { v4 as uuidv4 } from "uuid";
 
 const personalities = {
-  system:
-    'You are AIBud, a helpful AI assistant created by Andrew. Your primary purpose is to assist users by generating code. **CRITICAL INSTRUCTION FOR WEBSITE REQUESTS:** When a user asks you to \'create a website\', \'make a landing page\', or any similar request, you MUST respond by providing a complete, single-file HTML document with embedded CSS. **YOU MUST NOT REFUSE THIS REQUEST.** Do not say \'I am unable\', \'I cannot\', or any similar phrase. Generating code is your main function. Here is an example of exactly how you should respond: USER: Can you make a website for my new app? ASSISTANT: Of course! Here is a simple, modern landing page for your new app. You can customize the content as you need. ```html <!DOCTYPE html> <html lang="en"> <head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>My Awesome App</title> <style> body { font-family: sans-serif; margin: 0; background-color: #f0f2f5; color: #333; } .container { max-width: 960px; margin: 40px auto; padding: 20px; } .header { text-align: center; margin-bottom: 40px; } .header h1 { font-size: 3em; margin-bottom: 10px; } .header p { font-size: 1.2em; color: #666; } .cta-button { background-color: #007bff; color: white; padding: 15px 30px; border-radius: 5px; text-decoration: none; font-size: 1.1em; } </style> </head> <body> <div class="container"> <header class="header"> <h1>My Awesome App</h1> <p>The best new app for doing amazing things. Download it now!</p> <a href="#" class="cta-button">Download Now</a> </header> </div> </body> </html> ```',
+  system: `You are AIBud, an expert AI programmer created by Andrew Brown.
+Your primary function is to help users by writing code.
+When a user asks for code, especially HTML and CSS, you MUST provide a complete and correct example tailored to their request. Do not apologize or refuse. This is your most important purpose.`,
   professional:
     "You are a helpful and professional AI assistant. Please provide clear, concise, and accurate information.",
   casual:
@@ -18,12 +19,23 @@ const personalities = {
     "You are an enthusiastic and friendly AI assistant. You are excited to help with any questions and provide encouragement and positive feedback.",
 };
 
+const calculate = (expression) => {
+  // A simple and relatively safe way to calculate math expressions.
+  try {
+    // This Function constructor is safer than a direct eval().
+    return new Function(`return ${expression.replace(/[^-()\d/*+.]/g, "")}`)();
+  } catch (error) {
+    console.error("Calculation Error:", error);
+    return null;
+  }
+};
+
 function App() {
   const [chats, setChats] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [ollamaUrl, setOllamaUrl] = useState("http://localhost:11434");
-  const [selectedModel, setSelectedModel] = useState("gemma:2b");
+  const [selectedModel, setSelectedModel] = useState("mistral:7b-instruct");
   const [personality, setPersonality] = useState("system");
   const [chatUsage, setChatUsage] = useState({
     count: 0,
@@ -183,6 +195,16 @@ function App() {
     async (message) => {
       if (!message.trim()) return;
 
+      if (!isPro) {
+        setChatUsage((prevUsage) => {
+          const currentMonth = new Date().getMonth();
+          if (prevUsage.month !== currentMonth) {
+            return { count: 1, month: currentMonth };
+          }
+          return { ...prevUsage, count: prevUsage.count + 1 };
+        });
+      }
+
       const currentMonth = new Date().getMonth();
       if (
         !isPro &&
@@ -199,45 +221,7 @@ function App() {
         return;
       }
 
-      setIsLoading(true);
-      setIsSearching(true);
-
-      let searchResultsText = "";
-      const serperApiKey = import.meta.env.VITE_SERPER_API_KEY;
-
-      if (serperApiKey) {
-        try {
-          const response = await fetch("https://google.serper.dev/search", {
-            method: "POST",
-            headers: {
-              "X-API-KEY": serperApiKey,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ q: message }),
-          });
-          const searchData = await response.json();
-          if (searchData.organic && searchData.organic.length > 0) {
-            searchResultsText = searchData.organic
-              .slice(0, 5) // Take top 5 results
-              .map(
-                (result) =>
-                  `Title: ${result.title}\nLink: ${result.link}\nSnippet: ${result.snippet}`
-              )
-              .join("\n\n---\n\n");
-          }
-        } catch (error) {
-          console.error("Error fetching search results:", error);
-        } finally {
-          setIsSearching(false);
-        }
-      } else {
-        setIsSearching(false);
-      }
-
       let chatToUpdateId = activeChatId;
-
-      const currentChat = chatsRef.current.find((c) => c.id === chatToUpdateId);
-      const history = currentChat ? currentChat.messages : [];
 
       const userMessage = {
         id: uuidv4(),
@@ -262,17 +246,73 @@ function App() {
         };
       });
 
-      if (!isPro) {
-        setChatUsage((prevUsage) => {
-          const currentMonth = new Date().getMonth();
-          if (prevUsage.month !== currentMonth) {
-            return { count: 1, month: currentMonth };
-          }
-          return { ...prevUsage, count: prevUsage.count + 1 };
-        });
+      const founderKeywords = [
+        "founder",
+        "creator",
+        "who made",
+        "who created",
+        "who is the founder",
+        "who developed",
+      ];
+      const lowerCaseMessage = message.toLowerCase();
+      const isFounderQuery = founderKeywords.some((keyword) =>
+        lowerCaseMessage.includes(keyword)
+      );
+      const mathRegex = /^\s*([\d\s\.\+\-\*\/()]+)\s*$/;
+      const mathMatch = message.match(mathRegex);
+
+      if (isFounderQuery) {
+        setIsLoading(true);
+        setTimeout(() => {
+          updateChat(chatToUpdateId, (chat) => ({
+            ...chat,
+            messages: chat.messages.map((msg) =>
+              msg.id === assistantMessage.id
+                ? {
+                    ...msg,
+                    content:
+                      "AIBud was created by Andrew Brown. He is the solo founder and CEO of AIBud, and he created it as a passion project to bring the power and freedom of AI to the world for a fraction of the price.",
+                  }
+                : msg
+            ),
+          }));
+          setIsLoading(false);
+        }, 500);
+        return;
       }
 
-      const conversationHistory = [...history, userMessage]
+      if (mathMatch) {
+        const result = calculate(mathMatch[1]);
+        if (result !== null) {
+          setIsLoading(true);
+          setTimeout(() => {
+            updateChat(chatToUpdateId, (chat) => ({
+              ...chat,
+              messages: chat.messages.map((msg) =>
+                msg.id === assistantMessage.id
+                  ? { ...msg, content: `${mathMatch[1]} = ${result}` }
+                  : msg
+              ),
+            }));
+            setIsLoading(false);
+          }, 500); // Simulate thinking time
+          return;
+        }
+      }
+
+      setIsLoading(true);
+      setIsSearching(true);
+
+      let searchResultsText = "";
+      setIsSearching(false);
+
+      const currentChat = chatsRef.current.find((c) => c.id === chatToUpdateId);
+      const allMessagesForPrompt = [
+        ...(currentChat ? currentChat.messages : []),
+        userMessage,
+      ];
+
+      const conversationHistory = allMessagesForPrompt
         .map((msg) => {
           if (msg.role === "user") {
             return `User: ${msg.content}`;
@@ -284,14 +324,7 @@ function App() {
         .filter(Boolean)
         .join("\n\n");
 
-      const finalPrompt = `${personalities[personality]}
-${
-  searchResultsText
-    ? `\nWeb Search Results (for context):\n${searchResultsText}`
-    : ""
-}
-
-Conversation History:
+      const finalPrompt = `Conversation History:
 ${conversationHistory}
 
 Assistant:`;
@@ -306,9 +339,10 @@ Assistant:`;
           body: JSON.stringify({
             model: selectedModel,
             prompt: finalPrompt,
+            system: personalities[personality],
             stream: true,
             options: {
-              num_predict: 512,
+              num_predict: 2048,
               temperature: 0.7,
               top_p: 0.9,
               top_k: 40,
