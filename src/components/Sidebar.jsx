@@ -39,14 +39,14 @@ const ChatMenu = ({ chat, onRename, onDelete, onClose, triggerRef }) => {
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="absolute right-0 top-full mt-1 w-32 bg-light-surface dark:bg-dark-surface rounded-md shadow-lg z-10 border border-light-background dark:border-dark-background"
+      className="absolute right-0 top-full mt-1 w-32 bg-surface rounded-md shadow-lg z-10 border border-background"
     >
       <button
         onClick={() => {
           onRename(chat.id, chat.title);
           onClose();
         }}
-        className="flex items-center w-full px-3 py-2 text-sm text-left hover:bg-light-background dark:hover:bg-dark-background"
+        className="flex items-center w-full px-3 py-2 text-sm text-left hover:bg-background"
       >
         <Edit3 size={14} className="mr-2" />
         Rename
@@ -56,7 +56,7 @@ const ChatMenu = ({ chat, onRename, onDelete, onClose, triggerRef }) => {
           onDelete(chat.id);
           onClose();
         }}
-        className="flex items-center w-full px-3 py-2 text-sm text-left text-red-500 hover:bg-light-background dark:hover:bg-dark-background"
+        className="flex items-center w-full px-3 py-2 text-sm text-left text-red-500 hover:bg-background"
       >
         <Trash2 size={14} className="mr-2" />
         Delete
@@ -78,7 +78,6 @@ const Sidebar = React.memo(
     isDarkMode,
     onToggleTheme,
     onShowSettings,
-    chatUsage,
     isPro,
   }) => {
     const [editingChatId, setEditingChatId] = useState(null);
@@ -119,7 +118,7 @@ const Sidebar = React.memo(
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className={`h-full flex flex-col ${
           isCollapsed ? "w-20" : "w-80"
-        } bg-light-surface dark:bg-dark-surface p-3 transition-colors duration-300`}
+        } bg-surface p-3 transition-colors duration-300`}
       >
         <div
           className={`flex items-center mb-4 ${
@@ -127,13 +126,11 @@ const Sidebar = React.memo(
           }`}
         >
           {!isCollapsed && (
-            <h1 className="text-2xl font-bold text-light-primary dark:text-dark-primary">
-              AIBud
-            </h1>
+            <h1 className="text-2xl font-bold text-primary">AIBud</h1>
           )}
           <button
             onClick={onToggle}
-            className="p-2 rounded-md hover:bg-light-background dark:hover:bg-dark-background"
+            className="p-2 rounded-md hover:bg-background"
           >
             {isCollapsed ? <ChevronsRight /> : <ChevronsLeft />}
           </button>
@@ -143,7 +140,7 @@ const Sidebar = React.memo(
           onClick={onNewChat}
           className={`flex items-center justify-center w-full p-3 rounded-lg text-lg font-semibold mb-4 transition-all duration-200 ${
             isCollapsed ? "" : "justify-start"
-          } bg-light-primary text-white hover:bg-blue-700`}
+          } bg-primary text-white hover:bg-blue-700`}
         >
           <MessageSquarePlus className={isCollapsed ? "" : "mr-3"} />
           {!isCollapsed && (
@@ -175,8 +172,8 @@ const Sidebar = React.memo(
                   transition={{ duration: 0.2 }}
                   className={`group flex items-center p-3 my-1 rounded-lg cursor-pointer transition-colors duration-200 relative ${
                     activeChatId === chat.id
-                      ? "bg-light-primary/20 dark:bg-dark-primary/20"
-                      : "hover:bg-light-background dark:hover:bg-dark-background"
+                      ? "bg-primary/20"
+                      : "hover:bg-background"
                   }`}
                   onClick={() => !editingChatId && onSwitchChat(chat.id)}
                 >
@@ -212,7 +209,7 @@ const Sidebar = React.memo(
                           e.stopPropagation();
                           toggleMenu(chat.id);
                         }}
-                        className="p-1 rounded-md opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-light-background dark:hover:bg-dark-background"
+                        className="p-1 rounded-md opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-background"
                       >
                         <MoreHorizontal size={16} />
                       </button>
@@ -251,16 +248,14 @@ const Sidebar = React.memo(
           </AnimatePresence>
         </div>
 
-        <div
-          className={`pt-3 border-t border-light-background dark:border-dark-background`}
-        >
+        <div className={`pt-3 border-t border-background`}>
           {!isCollapsed && !isPro && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="px-2 pb-2 text-center"
             >
-              <p className="text-xs text-light-secondary dark:text-dark-secondary">
+              <p className="text-xs text-secondary">
                 {Math.max(0, 100 - chatUsage.count)} messages remaining this
                 month.
               </p>
@@ -273,13 +268,13 @@ const Sidebar = React.memo(
           >
             <button
               onClick={onToggleTheme}
-              className="p-2 rounded-md hover:bg-light-background dark:hover:bg-dark-background"
+              className="p-2 rounded-md hover:bg-background"
             >
               {isDarkMode ? <Sun /> : <Moon />}
             </button>
             <button
               onClick={onShowSettings}
-              className="p-2 rounded-md hover:bg-light-background dark:hover:bg-dark-background"
+              className="p-2 rounded-md hover:bg-background"
             >
               <Settings />
             </button>

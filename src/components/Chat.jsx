@@ -9,7 +9,6 @@ import {
   Sparkles,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import "highlight.js/styles/github-dark.css";
 import hljs from "highlight.js";
 import Markdown from "react-markdown";
 
@@ -24,7 +23,7 @@ const TypingIndicator = React.memo(() => (
         y: [0, -4, 0],
         transition: { duration: 1, repeat: Infinity, ease: "easeInOut" },
       }}
-      className="w-2 h-2 bg-light-secondary rounded-full"
+      className="w-2 h-2 bg-text-secondary rounded-full"
     />
     <motion.div
       animate={{
@@ -36,7 +35,7 @@ const TypingIndicator = React.memo(() => (
           delay: 0.2,
         },
       }}
-      className="w-2 h-2 bg-light-secondary rounded-full"
+      className="w-2 h-2 bg-text-secondary rounded-full"
     />
     <motion.div
       animate={{
@@ -48,12 +47,12 @@ const TypingIndicator = React.memo(() => (
           delay: 0.4,
         },
       }}
-      className="w-2 h-2 bg-light-secondary rounded-full"
+      className="w-2 h-2 bg-text-secondary rounded-full"
     />
   </motion.div>
 ));
 
-const CodeBlock = React.memo(({ language, value }) => {
+const CodeBlock = React.memo(({ language, value, isDarkMode }) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -63,12 +62,12 @@ const CodeBlock = React.memo(({ language, value }) => {
   };
 
   return (
-    <div className="relative rounded-md my-4 bg-[#0d1117] text-sm">
-      <div className="flex justify-between items-center text-xs text-gray-400 px-4 py-2 border-b border-gray-700">
+    <div className="relative rounded-md my-4 bg-surface-secondary text-sm overflow-hidden">
+      <div className="flex justify-between items-center text-xs text-text-secondary px-4 py-2 border-b border-border">
         <span>{language || "code"}</span>
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1.5 hover:text-white"
+          className="flex items-center gap-1.5 hover:text-text"
         >
           {copied ? (
             <>
@@ -81,8 +80,9 @@ const CodeBlock = React.memo(({ language, value }) => {
           )}
         </button>
       </div>
-      <pre className="p-4 overflow-x-auto">
+      <pre className="overflow-x-auto">
         <code
+          className="hljs p-4 block"
           dangerouslySetInnerHTML={{
             __html: hljs.highlight(value, {
               language: language || "plaintext",
@@ -94,13 +94,14 @@ const CodeBlock = React.memo(({ language, value }) => {
   );
 });
 
-const ChatMessage = React.memo(({ message, isDarkMode }) => {
+const ChatMessage = React.memo(({ message, isDarkMode, msgKey }) => {
   const isUser = message.role === "user";
   const isError = message.isError;
   const isAssistant = message.role === "assistant";
 
   return (
     <motion.div
+      key={msgKey}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
@@ -111,7 +112,7 @@ const ChatMessage = React.memo(({ message, isDarkMode }) => {
           className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center ${
             isError
               ? "bg-red-500/20 text-red-500"
-              : "bg-light-primary/20 text-light-primary"
+              : "bg-primary/20 text-primary"
           }`}
         >
           {isError ? <AlertTriangle size={18} /> : <Zap size={18} />}
@@ -120,8 +121,8 @@ const ChatMessage = React.memo(({ message, isDarkMode }) => {
       <div
         className={`max-w-xl p-4 rounded-2xl shadow-sm relative ${
           isUser
-            ? "bg-light-primary text-white rounded-br-lg"
-            : `text-light-text dark:text-dark-text bg-light-surface dark:bg-dark-surface rounded-bl-lg`
+            ? "bg-primary text-white rounded-br-lg"
+            : `text-text bg-surface rounded-bl-lg`
         } ${
           isError
             ? "bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200"
@@ -138,13 +139,14 @@ const ChatMessage = React.memo(({ message, isDarkMode }) => {
                   const match = /language-(\w+)/.exec(className || "");
                   return !inline && match ? (
                     <CodeBlock
+                      isDarkMode={isDarkMode}
                       language={match[1]}
                       value={String(children).replace(/\n$/, "")}
                       {...props}
                     />
                   ) : (
                     <code
-                      className="bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded text-light-primary dark:text-dark-primary"
+                      className="bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded text-primary"
                       {...props}
                     >
                       {children}
@@ -162,7 +164,7 @@ const ChatMessage = React.memo(({ message, isDarkMode }) => {
                       href={href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-light-primary underline hover:opacity-80"
+                      className="text-primary underline hover:opacity-80"
                     />
                   );
                 },
@@ -174,7 +176,7 @@ const ChatMessage = React.memo(({ message, isDarkMode }) => {
         </AnimatePresence>
       </div>
       {isUser && (
-        <div className="w-8 h-8 rounded-full bg-light-secondary/20 dark:bg-dark-secondary/20 text-light-secondary dark:text-dark-secondary flex-shrink-0 flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full bg-text-secondary/20 text-text-secondary flex-shrink-0 flex items-center justify-center">
           U
         </div>
       )}
@@ -188,11 +190,11 @@ const ChatWelcomeMessage = React.memo(() => (
     animate={{ opacity: 1, y: 0 }}
     className="flex flex-col items-center justify-center h-full text-center p-4"
   >
-    <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 bg-light-primary/20 text-light-primary dark:bg-dark-primary/20 dark:text-dark-primary">
+    <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 bg-primary/20 text-primary">
       <Sparkles className="w-8 h-8" />
     </div>
     <h2 className="text-2xl font-bold mb-2">AIBud</h2>
-    <p className="text-light-secondary dark:text-dark-secondary">
+    <p className="text-text-secondary">
       Start a conversation by typing your message below.
     </p>
   </motion.div>
@@ -232,7 +234,7 @@ const Chat = React.memo(
 
     return (
       <div className="flex flex-col h-full">
-        <header className="p-4 border-b border-light-surface dark:border-dark-surface">
+        <header className="p-4 border-b border-border">
           <h2 className="text-xl font-semibold">{chat?.title || "Chat"}</h2>
         </header>
         <div className="flex-1 p-4 overflow-y-auto">
@@ -241,6 +243,7 @@ const Chat = React.memo(
               chat.messages.map((msg) => (
                 <ChatMessage
                   key={msg.id}
+                  msgKey={msg.id}
                   message={msg}
                   isDarkMode={isDarkMode}
                 />
@@ -252,7 +255,7 @@ const Chat = React.memo(
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="p-4 border-t border-light-surface dark:border-dark-surface">
+        <div className="p-4 border-t border-border">
           <form onSubmit={handleSend} className="relative">
             <textarea
               ref={textareaRef}
@@ -266,14 +269,14 @@ const Chat = React.memo(
                 }
               }}
               placeholder="Type your message..."
-              className="w-full p-4 pr-24 rounded-lg bg-light-surface dark:bg-dark-surface resize-none focus:outline-none focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary transition-all duration-300"
+              className="w-full p-4 pr-24 rounded-lg bg-surface resize-none focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-300"
               rows={1}
               disabled={isLoading}
             />
             <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center">
               {isLoading ? (
                 <div className="flex items-center space-x-2">
-                  <span className="text-xs text-light-secondary dark:text-dark-secondary animate-pulse">
+                  <span className="text-xs text-text-secondary animate-pulse">
                     {isSearching ? "Searching..." : "Generating..."}
                   </span>
                   <button
@@ -288,7 +291,7 @@ const Chat = React.memo(
                 <button
                   type="submit"
                   disabled={!input.trim()}
-                  className="p-2 rounded-full bg-light-primary text-white disabled:bg-light-secondary/50 disabled:cursor-not-allowed"
+                  className="p-2 rounded-full bg-primary text-white disabled:bg-text-secondary/50 disabled:cursor-not-allowed"
                 >
                   <Send size={20} />
                 </button>

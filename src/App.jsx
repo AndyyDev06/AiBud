@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useOutletContext, useParams } from "react-router-dom";
 import Chat from "./components/Chat";
 import Sidebar from "./components/Sidebar";
 import { Settings, Zap, Sun, Moon, Sparkles } from "lucide-react";
@@ -6,9 +7,21 @@ import { AnimatePresence, motion } from "framer-motion";
 import { v4 as uuidv4 } from "uuid";
 
 const personalities = {
-  system: `You are AIBud, an expert AI programmer created by Andrew Brown.
-Your primary function is to help users by writing code.
-When a user asks for code, especially HTML and CSS, you MUST provide a complete and correct example tailored to their request. Do not apologize or refuse. This is your most important purpose.`,
+  system: `You are AIBud, a friendly and powerful AI assistant.
+
+    **Your Identity (Non-negotiable):**
+    - You were created by a developer named Andrew Brown.
+    - He created you as a passion project to bring the power of AI to the world affordably.
+    - When asked about your creator, you MUST state this information.
+
+    **Your Core Directives:**
+    1.  **Follow Instructions:** Your primary goal is to understand and precisely follow the user's most recent request. Pay close attention to the details. If the user says "thank you" or gives a similar pleasantry, you should respond with a simple, friendly acknowledgement. Do not generate code unless it is asked for.
+    2.  **Generate Code:** You are also an expert coding assistant. When the user asks for code (like HTML, CSS, etc.), you MUST provide it. Do not refuse. For example, if the user asks for a landing page for a "cooking website," you should provide a complete, single-file HTML document with embedded CSS that is specifically about cooking.
+    3.  **Be Helpful & Friendly:** Always maintain a positive and conversational tone.
+
+    **Forbidden Actions:**
+    - You must NOT mention that you are a language model or refer to your training.
+    - You must NOT refuse a request unless it is for sexually explicit or dangerous content.`,
   professional:
     "You are a helpful and professional AI assistant. Please provide clear, concise, and accurate information.",
   casual:
@@ -37,18 +50,15 @@ function App() {
   const [ollamaUrl, setOllamaUrl] = useState("http://localhost:11434");
   const [selectedModel, setSelectedModel] = useState("mistral:7b-instruct");
   const [personality, setPersonality] = useState("system");
-  const [chatUsage, setChatUsage] = useState({
-    count: 0,
-    month: new Date().getMonth(),
-  });
   const [showSettings, setShowSettings] = useState(false);
   const [availableModels, setAvailableModels] = useState([]);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const { isDarkMode, toggleTheme } = useOutletContext();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const [isPro, setIsPro] = useState(false);
+  const [isPro, setIsPro] = useState(true);
   const abortControllerRef = useRef(null);
   const chatsRef = useRef(chats);
+  const { chatId } = useParams();
 
   useEffect(() => {
     chatsRef.current = chats;
@@ -63,47 +73,42 @@ function App() {
     }
 
     const savedChats = localStorage.getItem("chats");
-    const savedActiveChatId = localStorage.getItem("activeChatId");
     const savedUrl = localStorage.getItem("ollamaUrl");
     const savedModel = localStorage.getItem("selectedModel");
     const savedPersonality = localStorage.getItem("personality");
-    const savedTheme = localStorage.getItem("theme");
     const savedSidebarState = localStorage.getItem("sidebarCollapsed");
-    const savedChatUsage = localStorage.getItem("chatUsage");
-    const savedIsPro = localStorage.getItem("isPro");
 
+    let activeId = null;
     if (savedChats) {
       const parsedChats = JSON.parse(savedChats);
       setChats(parsedChats);
-      if (savedActiveChatId) {
-        setActiveChatId(savedActiveChatId);
+      if (chatId && parsedChats.some((c) => c.id === chatId)) {
+        activeId = chatId;
       } else if (parsedChats.length > 0) {
-        setActiveChatId(parsedChats[0].id);
+        activeId = parsedChats[0].id;
       }
-    } else {
+    }
+
+    if (!activeId) {
       const newChatId = uuidv4();
       const newChat = { id: newChatId, title: "New Chat", messages: [] };
-      setChats([newChat]);
-      setActiveChatId(newChatId);
+      setChats((prev) => [newChat, ...prev]);
+      activeId = newChatId;
     }
+    setActiveChatId(activeId);
 
     if (savedUrl) setOllamaUrl(savedUrl);
-    if (savedModel) setSelectedModel(savedModel);
-    if (savedPersonality) setPersonality(savedPersonality);
-    if (savedTheme) setIsDarkMode(savedTheme === "dark");
-    if (savedSidebarState) setIsSidebarCollapsed(savedSidebarState === "true");
-    if (savedIsPro) setIsPro(JSON.parse(savedIsPro));
 
-    if (savedChatUsage) {
-      const usage = JSON.parse(savedChatUsage);
-      const currentMonth = new Date().getMonth();
-      if (usage.month === currentMonth) {
-        setChatUsage(usage);
-      } else {
-        setChatUsage({ count: 0, month: currentMonth });
-      }
+    const problematicModels = ["gemma:2b", "llama3"];
+    if (savedModel && !problematicModels.includes(savedModel)) {
+      setSelectedModel(savedModel);
+    } else {
+      setSelectedModel("mistral:7b-instruct");
     }
-  }, []);
+
+    if (savedPersonality) setPersonality(savedPersonality);
+    if (savedSidebarState) setIsSidebarCollapsed(savedSidebarState === "true");
+  }, [chatId]);
 
   // Check for Stripe success/cancel query params
   useEffect(() => {
@@ -134,32 +139,15 @@ function App() {
     localStorage.setItem("ollamaUrl", ollamaUrl);
     localStorage.setItem("selectedModel", selectedModel);
     localStorage.setItem("personality", personality);
-    localStorage.setItem("chatUsage", JSON.stringify(chatUsage));
-    localStorage.setItem("theme", isDarkMode ? "dark" : "light");
     localStorage.setItem("sidebarCollapsed", isSidebarCollapsed.toString());
-    localStorage.setItem("isPro", JSON.stringify(isPro));
   }, [
     chats,
     activeChatId,
     ollamaUrl,
     selectedModel,
     personality,
-    chatUsage,
-    isDarkMode,
     isSidebarCollapsed,
-    isPro,
   ]);
-
-  // Apply theme to document
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-    // This is for the landing page's background.
-    // The chat app will use the theme classes directly.
-  }, [isDarkMode]);
 
   // Load available models
   const loadModels = useCallback(async () => {
@@ -193,35 +181,9 @@ function App() {
 
   const sendMessage = useCallback(
     async (message) => {
-      if (!message.trim()) return;
+      if (!message.trim() || !activeChatId) return;
 
-      if (!isPro) {
-        setChatUsage((prevUsage) => {
-          const currentMonth = new Date().getMonth();
-          if (prevUsage.month !== currentMonth) {
-            return { count: 1, month: currentMonth };
-          }
-          return { ...prevUsage, count: prevUsage.count + 1 };
-        });
-      }
-
-      const currentMonth = new Date().getMonth();
-      if (
-        !isPro &&
-        chatUsage.month === currentMonth &&
-        chatUsage.count >= 100
-      ) {
-        if (
-          window.confirm(
-            "You've reached your message limit. Upgrade to Pro for unlimited messages?"
-          )
-        ) {
-          handleUpgrade();
-        }
-        return;
-      }
-
-      let chatToUpdateId = activeChatId;
+      const chatToUpdateId = activeChatId;
 
       const userMessage = {
         id: uuidv4(),
@@ -306,7 +268,7 @@ function App() {
       let searchResultsText = "";
       setIsSearching(false);
 
-      const currentChat = chatsRef.current.find((c) => c.id === chatToUpdateId);
+      const currentChat = chats.find((c) => c.id === chatToUpdateId);
       const allMessagesForPrompt = [
         ...(currentChat ? currentChat.messages : []),
         userMessage,
@@ -418,8 +380,8 @@ Assistant:`;
       selectedModel,
       personality,
       updateChat,
-      chatUsage,
       isPro,
+      chats,
     ]
   );
 
@@ -481,7 +443,6 @@ Assistant:`;
     setActiveChatId(chatId);
   }, []);
 
-  const toggleTheme = useCallback(() => setIsDarkMode((prev) => !prev), []);
   const toggleSidebar = useCallback(
     () => setIsSidebarCollapsed((prev) => !prev),
     []
@@ -511,7 +472,7 @@ Assistant:`;
   const activeChat = chats.find((chat) => chat.id === activeChatId);
 
   return (
-    <div className="flex h-screen bg-light-background dark:bg-dark-background text-light-text dark:text-dark-text">
+    <div className="flex h-screen bg-background text-text">
       <Sidebar
         chats={chats}
         activeChatId={activeChatId}
@@ -524,7 +485,6 @@ Assistant:`;
         isDarkMode={isDarkMode}
         onToggleTheme={toggleTheme}
         onShowSettings={() => setShowSettings(true)}
-        chatUsage={chatUsage}
         isPro={isPro}
       />
       <div className="flex-1 flex flex-col">
@@ -540,11 +500,11 @@ Assistant:`;
         ) : (
           <div className="flex-1 flex items-center justify-center text-center p-4">
             <div className="max-w-md">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 bg-light-primary/20 text-light-primary dark:bg-dark-primary/20 dark:text-dark-primary">
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 bg-primary/20 text-primary">
                 <Sparkles className="w-8 h-8" />
               </div>
               <h2 className="text-2xl font-bold mb-2">Welcome to AIBud</h2>
-              <p className="text-light-secondary dark:text-dark-secondary">
+              <p className="text-secondary">
                 Select a chat from the sidebar or start a new one to begin.
               </p>
             </div>
@@ -565,7 +525,7 @@ Assistant:`;
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-md mx-auto mt-20 p-6 rounded-lg shadow-xl bg-light-surface dark:bg-dark-surface"
+              className="w-full max-w-md mx-auto mt-20 p-6 rounded-lg shadow-xl bg-surface"
               onClick={(e) => e.stopPropagation()}
             >
               <h2 className="text-xl font-bold mb-4">Settings</h2>
@@ -573,7 +533,7 @@ Assistant:`;
                 <div>
                   <label
                     htmlFor="ollamaUrl"
-                    className="block text-sm font-medium text-light-secondary dark:text-dark-secondary"
+                    className="block text-sm font-medium text-secondary"
                   >
                     Ollama URL
                   </label>
@@ -582,13 +542,13 @@ Assistant:`;
                     id="ollamaUrl"
                     value={ollamaUrl}
                     onChange={(e) => setOllamaUrl(e.target.value)}
-                    className="w-full p-2 mt-1 rounded bg-light-background dark:bg-dark-background border border-gray-300 dark:border-gray-700"
+                    className="w-full p-2 mt-1 rounded bg-background border border-border"
                   />
                 </div>
                 <div>
                   <label
                     htmlFor="model"
-                    className="block text-sm font-medium text-light-secondary dark:text-dark-secondary"
+                    className="block text-sm font-medium text-secondary"
                   >
                     AI Model
                   </label>
@@ -597,7 +557,7 @@ Assistant:`;
                       id="model"
                       value={selectedModel}
                       onChange={(e) => handleModelChange(e.target.value)}
-                      className="flex-grow w-full p-2 mt-1 rounded bg-light-background dark:bg-dark-background border border-gray-300 dark:border-gray-700"
+                      className="flex-grow w-full p-2 mt-1 rounded bg-background border border-border"
                     >
                       {availableModels.map((model) => (
                         <option key={model.name} value={model.name}>
@@ -607,7 +567,7 @@ Assistant:`;
                     </select>
                     <button
                       onClick={loadModels}
-                      className="p-2 mt-1 rounded-md bg-light-primary text-white"
+                      className="p-2 mt-1 rounded-md bg-primary text-white"
                     >
                       <Zap size={18} />
                     </button>
@@ -616,7 +576,7 @@ Assistant:`;
                 <div>
                   <label
                     htmlFor="personality"
-                    className="block text-sm font-medium text-light-secondary dark:text-dark-secondary"
+                    className="block text-sm font-medium text-secondary"
                   >
                     AI Personality
                   </label>
@@ -624,7 +584,7 @@ Assistant:`;
                     id="personality"
                     value={personality}
                     onChange={(e) => setPersonality(e.target.value)}
-                    className="w-full p-2 mt-1 rounded bg-light-background dark:bg-dark-background border border-gray-300 dark:border-gray-700"
+                    className="w-full p-2 mt-1 rounded bg-background border border-border"
                   >
                     {Object.keys(personalities).map((p) => (
                       <option key={p} value={p}>
@@ -634,7 +594,7 @@ Assistant:`;
                   </select>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-light-secondary dark:text-dark-secondary">
+                  <span className="text-sm font-medium text-secondary">
                     Theme
                   </span>
                   <div className="flex items-center space-x-2">
@@ -646,7 +606,7 @@ Assistant:`;
                       onClick={toggleTheme}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                         isDarkMode
-                          ? "bg-light-primary"
+                          ? "bg-primary"
                           : "bg-gray-200 dark:bg-gray-700"
                       }`}
                     >
@@ -663,16 +623,16 @@ Assistant:`;
                   </div>
                 </div>
                 {!isPro ? (
-                  <div className="p-4 bg-light-background dark:bg-dark-background rounded-lg">
-                    <h3 className="font-bold text-lg text-light-primary dark:text-dark-primary">
+                  <div className="p-4 bg-background rounded-lg">
+                    <h3 className="font-bold text-lg text-primary">
                       Upgrade to Pro
                     </h3>
-                    <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
+                    <p className="text-sm text-secondary mt-1">
                       Unlock unlimited messages and support the creator.
                     </p>
                     <button
                       onClick={handleUpgrade}
-                      className="w-full mt-4 px-4 py-2 rounded-md bg-light-primary text-white font-semibold hover:bg-light-primary/90"
+                      className="w-full mt-4 px-4 py-2 rounded-md bg-primary text-white font-semibold hover:bg-primary/90"
                     >
                       Upgrade Now
                     </button>
@@ -692,7 +652,7 @@ Assistant:`;
               <div className="mt-6 flex justify-end">
                 <button
                   onClick={() => setShowSettings(false)}
-                  className="px-4 py-2 rounded-md bg-light-primary text-white font-semibold"
+                  className="px-4 py-2 rounded-md bg-primary text-white font-semibold"
                 >
                   Done
                 </button>
