@@ -47,8 +47,18 @@ function App() {
   const [chats, setChats] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // API Provider State
+  const [apiProvider, setApiProvider] = useState("ollama"); // 'ollama' or 'openai'
+
+  // Ollama State
   const [ollamaUrl, setOllamaUrl] = useState("http://localhost:11434");
   const [selectedModel, setSelectedModel] = useState("mistral:7b-instruct");
+
+  // OpenAI State
+  const [openAiApiKey, setOpenAiApiKey] = useState("");
+  const [openAiModel, setOpenAiModel] = useState("gpt-4o-mini");
+
   const [personality, setPersonality] = useState("system");
   const [showSettings, setShowSettings] = useState(false);
   const [availableModels, setAvailableModels] = useState([]);
@@ -77,6 +87,9 @@ function App() {
     const savedModel = localStorage.getItem("selectedModel");
     const savedPersonality = localStorage.getItem("personality");
     const savedSidebarState = localStorage.getItem("sidebarCollapsed");
+    const savedApiProvider = localStorage.getItem("apiProvider");
+    const savedOpenAiKey = localStorage.getItem("openAiApiKey");
+    const savedOpenAiModel = localStorage.getItem("openAiModel");
 
     let activeId = null;
     if (savedChats) {
@@ -108,6 +121,9 @@ function App() {
 
     if (savedPersonality) setPersonality(savedPersonality);
     if (savedSidebarState) setIsSidebarCollapsed(savedSidebarState === "true");
+    if (savedApiProvider) setApiProvider(savedApiProvider);
+    if (savedOpenAiKey) setOpenAiApiKey(savedOpenAiKey);
+    if (savedOpenAiModel) setOpenAiModel(savedOpenAiModel);
   }, [chatId]);
 
   // Check for Stripe success/cancel query params
@@ -140,6 +156,9 @@ function App() {
     localStorage.setItem("selectedModel", selectedModel);
     localStorage.setItem("personality", personality);
     localStorage.setItem("sidebarCollapsed", isSidebarCollapsed.toString());
+    localStorage.setItem("apiProvider", apiProvider);
+    localStorage.setItem("openAiApiKey", openAiApiKey);
+    localStorage.setItem("openAiModel", openAiModel);
   }, [
     chats,
     activeChatId,
@@ -147,6 +166,9 @@ function App() {
     selectedModel,
     personality,
     isSidebarCollapsed,
+    apiProvider,
+    openAiApiKey,
+    openAiModel,
   ]);
 
   // Load available models
@@ -182,6 +204,11 @@ function App() {
   const sendMessage = useCallback(
     async (message) => {
       if (!message.trim() || !activeChatId) return;
+
+      if (apiProvider === "openai" && !openAiApiKey) {
+        alert("Please enter your OpenAI API key in the settings.");
+        return;
+      }
 
       const chatToUpdateId = activeChatId;
 
@@ -268,110 +295,208 @@ function App() {
       let searchResultsText = "";
       setIsSearching(false);
 
-      const currentChat = chats.find((c) => c.id === chatToUpdateId);
-      const allMessagesForPrompt = [
-        ...(currentChat ? currentChat.messages : []),
-        userMessage,
-      ];
-
-      const conversationHistory = allMessagesForPrompt
-        .map((msg) => {
-          if (msg.role === "user") {
-            return `User: ${msg.content}`;
-          } else if (msg.role === "assistant" && msg.content) {
-            return `Assistant: ${msg.content}`;
-          }
-          return null;
-        })
-        .filter(Boolean)
-        .join("\n\n");
-
-      const finalPrompt = `Conversation History:
-${conversationHistory}
-
-Assistant:`;
-
       abortControllerRef.current = new AbortController();
 
-      try {
-        const response = await fetch(`${ollamaUrl}/api/generate`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          signal: abortControllerRef.current.signal,
-          body: JSON.stringify({
-            model: selectedModel,
-            prompt: finalPrompt,
-            system: personalities[personality],
-            stream: true,
-            options: {
-              num_predict: 2048,
-              temperature: 0.7,
-              top_p: 0.9,
-              top_k: 40,
-              repeat_penalty: 1.1,
-              seed: 42,
-            },
-          }),
-        });
+      if (apiProvider === "openai") {
+        // OpenAI API Logic
+        const currentChat = chats.find((c) => c.id === chatToUpdateId);
+        const previousMessages = currentChat
+          ? currentChat.messages.filter(
+              (m) => m.role === "user" || (m.role === "assistant" && m.content)
+            )
+          : [];
 
-        if (!response.ok) throw new Error("Failed to get response from Ollama");
+        const messagesForAPI = [
+          { role: "system", content: personalities[personality] },
+          ...previousMessages.map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+          { role: "user", content: message },
+        ];
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
+        try {
+          const response = await fetch(
+            "https://api.openai.com/v1/chat/completions",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${openAiApiKey}`,
+              },
+              signal: abortControllerRef.current.signal,
+              body: JSON.stringify({
+                model: openAiModel,
+                messages: messagesForAPI,
+                stream: true,
+              }),
+            }
+          );
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+          if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error.message);
+          }
 
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
 
-          for (const line of lines) {
-            if (line.trim() === "") continue;
-            try {
-              const parsed = JSON.parse(line);
-              if (parsed.response) {
-                updateChat(chatToUpdateId, (chat) => ({
-                  ...chat,
-                  messages: chat.messages.map((msg) =>
-                    msg.id === assistantMessage.id
-                      ? {
-                          ...msg,
-                          content: (msg.content + parsed.response).replace(
-                            /<company_name>/g,
-                            "AIBud"
-                          ),
-                        }
-                      : msg
-                  ),
-                }));
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                const data = line.substring(6);
+                if (data.trim() === "[DONE]") {
+                  break;
+                }
+                try {
+                  const parsed = JSON.parse(data);
+                  const content = parsed.choices[0]?.delta?.content;
+                  if (content) {
+                    updateChat(chatToUpdateId, (chat) => ({
+                      ...chat,
+                      messages: chat.messages.map((msg) =>
+                        msg.id === assistantMessage.id
+                          ? { ...msg, content: msg.content + content }
+                          : msg
+                      ),
+                    }));
+                  }
+                } catch (e) {
+                  console.error("Error parsing streaming JSON", e);
+                }
               }
-            } catch (e) {
-              console.error("Error parsing streaming JSON", e);
             }
           }
+        } catch (error) {
+          if (error.name !== "AbortError") {
+            console.error("Error:", error);
+            updateChat(activeChatId, (chat) => ({
+              ...chat,
+              messages: chat.messages.map((msg) =>
+                msg.id === assistantMessage.id
+                  ? {
+                      ...msg,
+                      content: `Sorry, I encountered an error: ${error.message}`,
+                      isError: true,
+                    }
+                  : msg
+              ),
+            }));
+          }
+        } finally {
+          setIsLoading(false);
+          abortControllerRef.current = null;
         }
-      } catch (error) {
-        if (error.name !== "AbortError") {
-          console.error("Error:", error);
-          updateChat(activeChatId, (chat) => ({
-            ...chat,
-            messages: chat.messages.map((msg) =>
-              msg.id === assistantMessage.id
-                ? {
-                    ...msg,
-                    content: "Sorry, I encountered an error.",
-                    isError: true,
-                  }
-                : msg
-            ),
-          }));
+      } else {
+        // Ollama API Logic
+        const currentChat = chats.find((c) => c.id === chatToUpdateId);
+        const allMessagesForPrompt = [
+          ...(currentChat ? currentChat.messages : []),
+        ];
+
+        const conversationHistory = allMessagesForPrompt
+          .map((msg) => {
+            if (msg.role === "user") {
+              return `User: ${msg.content}`;
+            } else if (msg.role === "assistant" && msg.content) {
+              return `Assistant: ${msg.content}`;
+            }
+            return null;
+          })
+          .filter(Boolean)
+          .join("\n\n");
+
+        const finalPrompt = `Conversation History:\n${conversationHistory}\n\nAssistant:`;
+
+        try {
+          const response = await fetch(`${ollamaUrl}/api/generate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: abortControllerRef.current.signal,
+            body: JSON.stringify({
+              model: selectedModel,
+              prompt: finalPrompt,
+              system: personalities[personality],
+              stream: true,
+              options: {
+                num_predict: 2048,
+                temperature: 0.7,
+                top_p: 0.9,
+                top_k: 40,
+                repeat_penalty: 1.1,
+                seed: 42,
+              },
+            }),
+          });
+
+          if (!response.ok)
+            throw new Error("Failed to get response from Ollama");
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+
+            for (const line of lines) {
+              if (line.trim() === "") continue;
+              try {
+                const parsed = JSON.parse(line);
+                if (parsed.response) {
+                  updateChat(chatToUpdateId, (chat) => ({
+                    ...chat,
+                    messages: chat.messages.map((msg) =>
+                      msg.id === assistantMessage.id
+                        ? {
+                            ...msg,
+                            content: (msg.content + parsed.response).replace(
+                              /<company_name>/g,
+                              "AIBud"
+                            ),
+                          }
+                        : msg
+                    ),
+                  }));
+                }
+              } catch (e) {
+                console.error("Error parsing streaming JSON", e);
+              }
+            }
+          }
+        } catch (error) {
+          if (error.name !== "AbortError") {
+            console.error("Error:", error);
+            updateChat(activeChatId, (chat) => ({
+              ...chat,
+              messages: chat.messages.map((msg) =>
+                msg.id === assistantMessage.id
+                  ? {
+                      ...msg,
+                      content: "Sorry, I encountered an error.",
+                      isError: true,
+                    }
+                  : msg
+              ),
+            }));
+          }
+        } finally {
+          setIsLoading(false);
+          abortControllerRef.current = null;
         }
-      } finally {
-        setIsLoading(false);
-        abortControllerRef.current = null;
       }
     },
     [
@@ -382,6 +507,9 @@ Assistant:`;
       updateChat,
       isPro,
       chats,
+      apiProvider,
+      openAiApiKey,
+      openAiModel,
     ]
   );
 
@@ -532,47 +660,108 @@ Assistant:`;
               <div className="space-y-4">
                 <div>
                   <label
-                    htmlFor="ollamaUrl"
+                    htmlFor="apiProvider"
                     className="block text-sm font-medium text-secondary"
                   >
-                    Ollama URL
+                    API Provider
                   </label>
-                  <input
-                    type="text"
-                    id="ollamaUrl"
-                    value={ollamaUrl}
-                    onChange={(e) => setOllamaUrl(e.target.value)}
+                  <select
+                    id="apiProvider"
+                    value={apiProvider}
+                    onChange={(e) => setApiProvider(e.target.value)}
                     className="w-full p-2 mt-1 rounded bg-background border border-border"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="model"
-                    className="block text-sm font-medium text-secondary"
                   >
-                    AI Model
-                  </label>
-                  <div className="flex items-center space-x-2">
-                    <select
-                      id="model"
-                      value={selectedModel}
-                      onChange={(e) => handleModelChange(e.target.value)}
-                      className="flex-grow w-full p-2 mt-1 rounded bg-background border border-border"
-                    >
-                      {availableModels.map((model) => (
-                        <option key={model.name} value={model.name}>
-                          {model.name}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={loadModels}
-                      className="p-2 mt-1 rounded-md bg-primary text-white"
-                    >
-                      <Zap size={18} />
-                    </button>
-                  </div>
+                    <option value="ollama">Ollama</option>
+                    <option value="openai">OpenAI</option>
+                  </select>
                 </div>
+
+                {apiProvider === "ollama" && (
+                  <>
+                    <div>
+                      <label
+                        htmlFor="ollamaUrl"
+                        className="block text-sm font-medium text-secondary"
+                      >
+                        Ollama URL
+                      </label>
+                      <input
+                        type="text"
+                        id="ollamaUrl"
+                        value={ollamaUrl}
+                        onChange={(e) => setOllamaUrl(e.target.value)}
+                        className="w-full p-2 mt-1 rounded bg-background border border-border"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="model"
+                        className="block text-sm font-medium text-secondary"
+                      >
+                        AI Model
+                      </label>
+                      <div className="flex items-center space-x-2">
+                        <select
+                          id="model"
+                          value={selectedModel}
+                          onChange={(e) => handleModelChange(e.target.value)}
+                          className="flex-grow w-full p-2 mt-1 rounded bg-background border border-border"
+                        >
+                          {availableModels.map((model) => (
+                            <option key={model.name} value={model.name}>
+                              {model.name}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={loadModels}
+                          className="p-2 mt-1 rounded-md bg-primary text-white"
+                        >
+                          <Zap size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {apiProvider === "openai" && (
+                  <>
+                    <div>
+                      <label
+                        htmlFor="openAiApiKey"
+                        className="block text-sm font-medium text-secondary"
+                      >
+                        OpenAI API Key
+                      </label>
+                      <input
+                        type="password"
+                        id="openAiApiKey"
+                        value={openAiApiKey}
+                        onChange={(e) => setOpenAiApiKey(e.target.value)}
+                        className="w-full p-2 mt-1 rounded bg-background border border-border"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="openAiModel"
+                        className="block text-sm font-medium text-secondary"
+                      >
+                        OpenAI Model
+                      </label>
+                      <select
+                        id="openAiModel"
+                        value={openAiModel}
+                        onChange={(e) => setOpenAiModel(e.target.value)}
+                        className="w-full p-2 mt-1 rounded bg-background border border-border"
+                      >
+                        <option value="gpt-4o-mini">GPT-4o Mini</option>
+                        <option value="gpt-4o">GPT-4o</option>
+                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+
                 <div>
                   <label
                     htmlFor="personality"
