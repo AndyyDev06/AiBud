@@ -77,7 +77,7 @@ const PricingCard = React.memo(
 
 const LandingPage = () => {
   const navigate = useNavigate();
-  const { isDarkMode, toggleTheme } = useOutletContext();
+  const { theme, toggleTheme, setTheme } = useOutletContext();
 
   const handleUpgrade = async () => {
     try {
@@ -105,7 +105,7 @@ const LandingPage = () => {
             onClick={toggleTheme}
             className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-dark-surface transition-colors"
           >
-            {isDarkMode ? (
+            {theme ? (
               <Sun className="w-6 h-6 text-yellow-400" />
             ) : (
               <Moon className="w-6 h-6 text-text-secondary" />

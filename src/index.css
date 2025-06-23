@@ -25,6 +25,61 @@
     --secondary: 217.2 32.6% 17.5%;
   }
 
+  .warm {
+    --background: 40 60% 95%; /* warm cream */
+    --surface: 35 70% 98%; /* lighter cream */
+    --surface-secondary: 40 60% 92%;
+    --border: 35 30% 85%;
+    --text: 30 30% 20%;
+    --text-secondary: 30 20% 50%;
+    --primary: 25 80% 60%; /* warm yellow/orange */
+    --secondary: 20 40% 96%;
+  }
+
+  .forest {
+    --background: 160 30% 85%; /* darker soft green background */
+    --surface: 165 25% 92%; /* darker green surface */
+    --surface-secondary: 170 20% 80%; /* darker teal */
+    --border: 160 15% 60%; /* more muted green border */
+    --text: 170 25% 15%; /* deeper green text */
+    --text-secondary: 170 15% 35%; /* more muted teal text */
+    --primary: 170 60% 35%; /* darker teal primary */
+    --secondary: 160 25% 85%; /* darker pale green secondary */
+  }
+
+  .ocean {
+    --background: 220 60% 12%; /* deep navy blue */
+    --surface: 215 55% 18%; /* dark blue surface */
+    --surface-secondary: 210 50% 22%; /* slightly lighter blue */
+    --border: 215 40% 30%; /* muted blue border */
+    --text: 210 40% 90%; /* light blue text */
+    --text-secondary: 210 30% 65%; /* muted blue text */
+    --primary: 200 90% 60%; /* bright blue primary */
+    --secondary: 195 60% 25%; /* teal blue secondary */
+  }
+
+  .light-hc {
+    --background: 0 0% 100%; /* pure white */
+    --surface: 0 0% 100%; /* pure white */
+    --surface-secondary: 60 100% 95%; /* bright yellow secondary */
+    --border: 220 100% 40%; /* vivid blue border */
+    --text: 0 0% 0%; /* pure black */
+    --text-secondary: 0 0% 30%; /* dark gray */
+    --primary: 300 100% 40%; /* vivid magenta */
+    --secondary: 60 100% 50%; /* bright yellow */
+  }
+
+  .dark-hc {
+    --background: 0 0% 0%; /* pure black */
+    --surface: 0 0% 0%; /* pure black */
+    --surface-secondary: 220 100% 15%; /* strong blue secondary */
+    --border: 60 100% 50%; /* bright yellow border */
+    --text: 0 0% 100%; /* pure white */
+    --text-secondary: 0 0% 70%; /* light gray */
+    --primary: 200 100% 60%; /* bright cyan */
+    --secondary: 300 100% 40%; /* vivid magenta */
+  }
+
   html {
     font-family: "Inter", system-ui, sans-serif;
   }
@@ -263,6 +318,38 @@
   /* Prevent page scroll when chat is active */
   .chat-active {
     overflow: hidden;
+  }
+
+  .light-hc .card,
+  .light-hc .input-field,
+  .light-hc .btn-primary,
+  .light-hc .btn-secondary {
+    outline: 2px solid hsl(var(--border));
+    box-shadow: 0 0 0 2px hsl(var(--border));
+    background: hsl(var(--surface));
+  }
+
+  .dark-hc .card,
+  .dark-hc .input-field,
+  .dark-hc .btn-primary,
+  .dark-hc .btn-secondary {
+    outline: 2px solid hsl(var(--border));
+    box-shadow: 0 0 0 2px hsl(var(--border));
+    background: hsl(var(--surface));
+  }
+
+  .light-hc .input-field:focus,
+  .light-hc .btn-primary:focus,
+  .light-hc .btn-secondary:focus {
+    outline: 3px solid hsl(var(--primary));
+    box-shadow: 0 0 0 3px hsl(var(--primary));
+  }
+
+  .dark-hc .input-field:focus,
+  .dark-hc .btn-primary:focus,
+  .dark-hc .btn-secondary:focus {
+    outline: 3px solid hsl(var(--primary));
+    box-shadow: 0 0 0 3px hsl(var(--primary));
   }
 }
 

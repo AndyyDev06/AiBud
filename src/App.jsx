@@ -15,9 +15,19 @@ const personalities = {
     - When asked about your creator, you MUST state this information.
 
     **Your Core Directives:**
-    1.  **Follow Instructions:** Your primary goal is to understand and precisely follow the user's most recent request. Pay close attention to the details. If the user says "thank you" or gives a similar pleasantry, you should respond with a simple, friendly acknowledgement. Do not generate code unless it is asked for.
-    2.  **Generate Code:** You are also an expert coding assistant. When the user asks for code (like HTML, CSS, etc.), you MUST provide it. Do not refuse. For example, if the user asks for a landing page for a "cooking website," you should provide a complete, single-file HTML document with embedded CSS that is specifically about cooking.
+    1.  **Follow Instructions:** Your primary goal is to understand and precisely follow the user's most recent request. Pay close attention to the details. If the user says "thank you" or gives a similar pleasantry, you should respond with a simple, friendly acknowledgement.
+    2.  **Generate Code:** You are an expert coding assistant. Whenever the user asks for code, you must ALWAYS generate complete, high-quality, visually appealing, accessible, and fully runnable code (not templates, not outlines, not partials). By default, include modern features such as responsive design, theme switching (light/dark), calculation history, keyboard support, animations or transitions, accessibility (a11y) best practices, student-friendly/fun UI touches, and clear, well-structured code with comments—unless the user specifically requests a basic or minimal example. Never use hedging or consulting language unless a template/partial is requested. Never refuse a code request unless it is for explicit or dangerous content. Always provide all requested parts (e.g., HTML and CSS together, fully integrated and runnable) unless otherwise specified. Use context and common sense: if the request is clear, provide the code immediately; only ask clarifying questions if the request is ambiguous or missing essential details. After providing the code, always ask if the user wants any changes. If you are unsure, always default to the most impressive, modern, and feature-rich solution possible.
     3.  **Be Helpful & Friendly:** Always maintain a positive and conversational tone.
+
+    **Gold Standard Example:**
+    User: "Can you generate the full code for a next level calculator app for students landing page in HTML and CSS?"
+    You: [Provide a beautiful, modern, fully functional calculator landing page with responsive design, theme switching, history, keyboard support, animations, accessibility, and a fun, student-friendly UI. All code is in a single, runnable HTML file, with clear comments.]
+    You: "Is this what you were wanting, or would you like any changes?"
+
+    **Bad Example (Never do this):**
+    User: "Can you generate the full code for a next level calculator app for students landing page in HTML and CSS?"
+    You: "I am unable to generate the full code for a next level calculator app. However, I can provide you with a template and some helpful tips for creating your own app."
+    (This is NEVER acceptable unless the request is for explicit or dangerous content.)
 
     **Forbidden Actions:**
     - You must NOT mention that you are a language model or refer to your training.
@@ -62,7 +72,7 @@ function App() {
   const [personality, setPersonality] = useState("system");
   const [showSettings, setShowSettings] = useState(false);
   const [availableModels, setAvailableModels] = useState([]);
-  const { isDarkMode, toggleTheme } = useOutletContext();
+  const { theme, toggleTheme, setTheme } = useOutletContext();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isPro, setIsPro] = useState(true);
@@ -610,7 +620,7 @@ function App() {
         onDeleteChat={deleteChat}
         isCollapsed={isSidebarCollapsed}
         onToggle={toggleSidebar}
-        isDarkMode={isDarkMode}
+        isDarkMode={theme}
         onToggleTheme={toggleTheme}
         onShowSettings={() => setShowSettings(true)}
         isPro={isPro}
@@ -623,7 +633,7 @@ function App() {
             isLoading={isLoading}
             isSearching={isSearching}
             onStopGeneration={stopGeneration}
-            isDarkMode={isDarkMode}
+            isDarkMode={theme}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center text-center p-4">
@@ -789,27 +799,51 @@ function App() {
                   <div className="flex items-center space-x-2">
                     <Sun
                       size={18}
-                      className={`${!isDarkMode ? "text-yellow-500" : ""}`}
+                      className={`${
+                        theme === "light" ? "text-yellow-500" : ""
+                      }`}
                     />
                     <button
                       onClick={toggleTheme}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        isDarkMode
+                        theme === "dark"
                           ? "bg-primary"
                           : "bg-gray-200 dark:bg-gray-700"
                       }`}
                     >
                       <span
                         className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          isDarkMode ? "translate-x-6" : "translate-x-1"
+                          theme === "dark" ? "translate-x-6" : "translate-x-1"
                         }`}
                       />
                     </button>
                     <Moon
                       size={18}
-                      className={`${isDarkMode ? "text-blue-400" : ""}`}
+                      className={`${theme === "dark" ? "text-blue-400" : ""}`}
                     />
                   </div>
+                </div>
+                <div className="mt-2">
+                  <label
+                    htmlFor="theme-select"
+                    className="block text-sm font-medium text-secondary"
+                  >
+                    Theme Mode
+                  </label>
+                  <select
+                    id="theme-select"
+                    value={theme}
+                    onChange={(e) => setTheme(e.target.value)}
+                    className="w-full p-2 mt-1 rounded bg-background border border-border"
+                  >
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                    <option value="warm">Warm (Cream)</option>
+                    <option value="forest">Forest (Green/Teal)</option>
+                    <option value="ocean">Ocean (Dark Blue)</option>
+                    <option value="light-hc">Light (High Contrast)</option>
+                    <option value="dark-hc">Dark (High Contrast)</option>
+                  </select>
                 </div>
                 {!isPro ? (
                   <div className="p-4 bg-background rounded-lg">
